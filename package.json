@@ -1,0 +1,9 @@
+{
+  "dependencies": {
+    "@reduxjs/toolkit": "^1.5.1",
+    "fp-ts": "^2.10.2",
+    "htm": "^3.0.4",
+    "preact": "^10.5.13",
+    "react-redux": "^7.2.3"
+  }
+}

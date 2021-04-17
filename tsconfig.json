@@ -1,0 +1,21 @@
+{
+  "include": ["src"],
+  "compilerOptions": {
+    "jsx": "react-jsx",
+    "jsxImportSource": "preact",
+    "module": "ESNext",
+    "target": "ESNext",
+    "noEmit": true,
+    "moduleResolution": "node",
+    "baseUrl": "./",
+    "paths": {
+      "*": [".snowpack/types/*"]
+      // "*": [".snowpack/source/node_modules/*"]
+    },
+    "skipLibCheck": true,
+    
+  },
+  // "exclude": [
+  //   "node_modules"
+  // ]
+}

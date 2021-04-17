@@ -1,0 +1,16 @@
+{
+  "dependencies": {
+    "@reduxjs/toolkit": "^1.5.1",
+    "fp-ts": "^2.10.2",
+    "htm": "^3.0.4",
+    "preact": "^10.5.13",
+    "react-redux": "^7.2.3"
+  },
+  "lock": {
+    "@reduxjs/toolkit#^1.5.1": "@reduxjs/toolkit@v1.5.1-LSGDYS6cQACYlUfEEe2s",
+    "fp-ts#^2.10.2": "fp-ts@v2.10.2-1P0BSIDBzQAyjlDXuNkn",
+    "htm#^3.0.4": "htm@v3.0.4-xXCzIvNpnEebQX6nRHAj",
+    "preact#^10.5.13": "preact@v10.5.13-JCcx5Q1RVW1Q32yUNQWK",
+    "react-redux#^7.2.3": "react-redux@v7.2.3-4qcxMqgsiRFCny7Hg8Au"
+  }
+}
