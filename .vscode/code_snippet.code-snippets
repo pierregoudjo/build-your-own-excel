@@ -32,5 +32,38 @@
 			"const alphabeticRange = (start: string, stop: string) => numericRange(start.charCodeAt(0), stop.charCodeAt(0)).map( x => String.fromCharCode(x))"
 		],
 		"description": "Generate an arrays of numbers and char within the ranges"
+	},
+	"Render input on click": {
+		"body": [
+			"const renderEditor = (value: String, position: Position, trigger: Trigger) => {",
+			"  return html`",
+			"    <td class=\"selected\">",
+			"     <input ",
+			"      id=\"celled\" ",
+			"      value=\\${value} ",
+			"      oninput=${(e: { target: HTMLInputElement; }) => trigger(updateValue([position, e.target.value]))} />",
+			"    </td>",
+			"  `",
+			"}",
+			"",
+			"const renderView = (value: String, position: Position, trigger: Trigger) => {",
+			"  return html`",
+			"    <td onclick=${() => trigger(startEdit(position))}>\\${value}</td>",
+			"  `",
+			"}",
+			"",
+			"const renderCell = (state: State, position: Position, trigger: Trigger) =>{",
+			"  const stringPosition = positionAsString(position)",
+			"  const cell = state.cells[stringPosition]",
+			"",
+			"  return pipe(",
+			"    state.active, ",
+			"    match(",
+			"      () => renderView(cell, position, trigger),",
+			"      (active) => positionEquals(active, position) ? renderEditor(cell, position, trigger) : renderView(cell, position, trigger)",
+			"    )",
+			"  )",
+			"}"
+		]
 	}
 }
