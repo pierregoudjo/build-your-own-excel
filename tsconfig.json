@@ -2,6 +2,7 @@
   "include": ["src"],
   "compilerOptions": {
     "jsx": "react-jsx",
+    "strict": true,
     "jsxImportSource": "preact",
     "module": "ESNext",
     "target": "ESNext",
