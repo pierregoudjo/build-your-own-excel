@@ -28,7 +28,14 @@ import P, { Parser } from "parsimmon"
 //      1 => Define Expr that is either a *Number* or a *Binary* (expr, *Operator*, expression)
 //      2 => Define operator parser, number parser and expression parser
 //      3 => Update 
-//      
+//
+
+//
+// Step 4: Evaluate expression
+//      1 => let ops = {"+": add, "*": multiply, "-": minus, "/": divide}
+//      2 => Write a recursive function that can evaluate the expression
+//
+
 
 type Position = [string, number]
 const positionAsString = (position: Position) => `${position[0]}${position[1]}`
@@ -62,6 +69,18 @@ const binary: Parser<Binary> = P.seq(number, operator, number)
 
 const expr: Parser<Expr> = P.alt(binary, number)
 
+const evaluate = (expr: Expr): number => {
+  if (typeof expr == 'number') {
+    return expr
+  } else {
+    let ops = {"+": add, "*": multiply, "-": minus, "/": divide}
+    const [l, op, r] = expr as Binary
+    const le = evaluate(l)
+    const re = evaluate(r)
+    return ops[op](le,re)
+  }
+}
+
 
 const startEdit = createAction<Position, "START_EDIT">("START_EDIT")
 const updateValue = createAction<[Position, string], "UPDATE_VALUE">("UPDATE_VALUE")
@@ -77,7 +96,7 @@ const initial: State = {
   cells: {}
 }
 
-const renderEditor = (value: String, position: Position, trigger: Trigger) => {
+const renderEditor = (value: string, position: Position, trigger: Trigger) => {
   return html`
     <td class="selected">
      <input 
@@ -88,9 +107,17 @@ const renderEditor = (value: String, position: Position, trigger: Trigger) => {
   `
 }
 
-const renderView = (value: String, position: Position, trigger: Trigger) => {
+const renderView = (value: Option<string>, position: Position, trigger: Trigger) => {
+  const displayValue = pipe(
+    value,
+    match(
+      () => "",
+      (v) => expr.map(evaluate).tryParse(v).toString()
+    )
+  )
+
   return html`
-    <td onclick=${() => trigger(startEdit(position))}>${value}</td>
+    <td onclick=${() => trigger(startEdit(position))}>${displayValue}</td>
   `
 }
 
@@ -98,14 +125,13 @@ const renderCell = (state: State, position: Position, trigger: Trigger) =>{
   const stringPosition = positionAsString(position)
   const cell = state.cells[stringPosition]
 
-  const parsed = cell ? expr.tryParse(cell) : ""
-  console.log(parsed)
+  const cellValue = cell ? some(cell) : none
 
   return pipe(
     state.active, 
     match(
-      () => renderView(cell, position, trigger),
-      (active) => positionEquals(active, position) ? renderEditor(cell, position, trigger) : renderView(cell, position, trigger)
+      () => renderView(cellValue, position, trigger),
+      (active) => positionEquals(active, position) ? renderEditor(cell, position, trigger) : renderView(cellValue, position, trigger)
     )
   )
 }
