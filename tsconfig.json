@@ -9,6 +9,7 @@
     "noEmit": true,
     "moduleResolution": "node",
     "baseUrl": "./",
+    "allowSyntheticDefaultImports": true,
     "paths": {
       "*": [".snowpack/types/*"]
       // "*": [".snowpack/source/node_modules/*"]

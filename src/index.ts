@@ -1,11 +1,13 @@
 import "preact/debug"
-import { AnyAction, createAction, createReducer, Dispatch } from "@reduxjs/toolkit"
-import {none, match, Option, some} from "fp-ts/es6/Option"
+import { createAction, createReducer } from "@reduxjs/toolkit"
+import {none, match, Option, some, of} from "fp-ts/es6/Option"
 import {html} from "htm/preact"
-import type {Render, Trigger, Update} from "./boot"
+import {add, divide, minus, multiply, Render, Trigger, Update} from "./boot"
 import {app} from "./boot"
 import { pipe } from "fp-ts/lib/function"
 import { useDispatch } from "react-redux"
+
+import P, { Parser } from "parsimmon"
 
 //
 // Step 1: Display a spreasheet
@@ -21,9 +23,24 @@ import { useDispatch } from "react-redux"
 //      3 => Render editor if the cell is the active one otherwise render a simple view (use snippet)
 //
 
+//
+// Step 3: Parser combinators
+//      1 => Define Expr that is either a *Number* or a *Binary* (expr, *Operator*, expression)
+//      2 => Define operator parser, number parser and expression parser
+//      3 => Update 
+//      
+
 type Position = [string, number]
 const positionAsString = (position: Position) => `${position[0]}${position[1]}`
 const positionEquals = (p1: Position, p2: Position) => p1[0] === p2[0] && p1[1] === p2[1]
+
+type Operator = "+" | "*" | "-" | "/"
+type Binary = [ Expr, Operator, Expr ] // A binary operation is a tuple of an expression, an operator and another expression
+
+type Expr = 
+  | Number
+  | Binary 
+
 
 type State = {
   cols: string[]
@@ -31,6 +48,20 @@ type State = {
   active: Option<Position>
   cells: Record<string, string>
 }
+
+let operator = P.alt(
+  P.string("+"),
+  P.string("*"),
+  P.string("-"),
+  P.string("/")
+)
+
+const number: Parser<number> = P.digits.map(Number)
+
+const binary: Parser<Binary> = P.seq(number, operator, number)
+
+const expr: Parser<Expr> = P.alt(binary, number)
+
 
 const startEdit = createAction<Position, "START_EDIT">("START_EDIT")
 const updateValue = createAction<[Position, string], "UPDATE_VALUE">("UPDATE_VALUE")
@@ -66,6 +97,9 @@ const renderView = (value: String, position: Position, trigger: Trigger) => {
 const renderCell = (state: State, position: Position, trigger: Trigger) =>{
   const stringPosition = positionAsString(position)
   const cell = state.cells[stringPosition]
+
+  const parsed = cell ? expr.tryParse(cell) : ""
+  console.log(parsed)
 
   return pipe(
     state.active, 
