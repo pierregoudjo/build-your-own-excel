@@ -20,7 +20,8 @@ td, th {
 }
 
 td.selected { 
-  padding:0px; 
+  padding:0px;
+  border: 2px solid #1565c0;
 }
 
 td input { 
