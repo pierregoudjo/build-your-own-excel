@@ -17,14 +17,64 @@
 	// }
 	"initial state": {
 		"body": [
-			"let initial: State = {",
+			"const initial: State = {",
 			"  cols: alphabeticRange(\"A\", \"Z\"),",
 			"  rows: numericRange(1, 15),",
 			"  active: none,",
-			"  cells: new Map()",
+			"  cells: {}",
 			"}"
 		],
-		"description": "Initial state of the App"
+		"description": "Initial state of the App",
+		"scope": "typescript"
+	},
+	"position utility functions": {
+		"body": [
+			"const positionAsString = (position: Position) => `\\${position[0]}\\${position[1]}`",
+			"const positionEquals = (p1: Position, p2: Position) => p1[0] === p2[0] && p1[1] === p2[1]"
+		],
+		"scope": "typescript",
+		"description": "Position utility functions"
+	},
+	"parse and evaluate expression" : {
+		"body": [
+			"type Operator = '+' | '* '| '-' | '/'",
+			"type Binary = [ Expr, Operator, Expr ] // A binary operation is a tuple of an expression, an operator and another expression",
+
+			"type Value = number",
+
+			"const Value = Number",
+
+			"const isValue = (expr: Expr): expr is Value => typeof expr == 'number'",
+
+			"type Expr = ",
+			"  | Value",
+			"  | Binary ",
+			"let operator = P.alt(",
+			"  P.string('+'),",
+			"  P.string('*'),",
+			"  P.string('-'),",
+			"  P.string('/')",
+			")",
+			"",
+			"",
+			"const value: Parser<Value> = P.digits.map(Value)",
+			"",
+			"const binary: Parser<Binary> = P.seq(value, operator, value)",
+			"",
+			"const expr: Parser<Expr> = P.alt(binary, value)",
+			"",
+			"const evaluate = (expr: Expr): Value => {",
+			"  if (isValue(expr)) {",
+			"    return expr",
+			"  } else {",
+			"    let ops = {\"+\": add, \"*\": multiply, \"-\": minus, \"/\": divide}",
+			"    const [l, op, r] = expr",
+			"    const le = evaluate(l)",
+			"    const re = evaluate(r)",
+			"    return ops[op](le,re)",
+			"  }",
+			"}",
+		]
 	},
 	"Numeric and Alphabetic Ranges": {
 		"body": [
@@ -39,9 +89,8 @@
 			"  return html`",
 			"    <td class=\"selected\">",
 			"     <input ",
-			"      id=\"celled\" ",
 			"      value=\\${value} ",
-			"      oninput=${(e: { target: HTMLInputElement; }) => trigger(updateValue([position, e.target.value]))} />",
+			"     />",
 			"    </td>",
 			"  `",
 			"}",

@@ -1,0 +1,29 @@
+||===================================||
+||  Build Your own Office 365        ||
+||        In an hour                 ||
+||====================================
+
+
+
+==================================
+Elm-style functional Architecture
+
+type State = {....}
+
+type Event = ......
+
+val initial : State
+
+val render: (State) => HTML
+
+val update: State => Event => State
+
+
+State ===========> View
+||                   ||
+||                   ||
+||             trigger an Event
+||                   ||
+||                   ||
+||                   ||
+||=================Update
