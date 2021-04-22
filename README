@@ -1,0 +1,4 @@
+# Run
+
+Install snowpack (npm install -g snowpack)
+snowpack dev

@@ -13,7 +13,7 @@ module.exports = {
   plugins: [
   ],
   packageOptions: {
-    source: "local",
+    source: "remote-next",
     types: true
   },
   devOptions: {
