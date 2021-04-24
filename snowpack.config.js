@@ -3,10 +3,6 @@
 
 /** @type {import("snowpack").SnowpackUserConfig } */
 module.exports = {
-  alias: {
-    "react": "preact/compat",
-    "react-dom": "preact/compat"
-  },
   mount: {
     "src": "/"
   },
@@ -21,5 +17,13 @@ module.exports = {
   },
   buildOptions: {
     /* ... */
+  },
+  dependencies: {
+    "fp-ts": "*",
+    "htm": "",
+    "parsimmon": "*",
+    "@types/parsimmon": "*",
+    "preact": "*",
+    "unistore": "*"
   }
 };

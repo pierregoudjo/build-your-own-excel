@@ -11,8 +11,7 @@
     "baseUrl": "./",
     "allowSyntheticDefaultImports": true,
     "paths": {
-      "*": [".snowpack/types/*"]
-      // "*": [".snowpack/source/node_modules/*"]
+      "*": [".snowpack/source/node_modules/*", ".snowpack/source/node_modules/@types/*"]
     },
     "skipLibCheck": true,
     
