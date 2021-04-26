@@ -29,3 +29,7 @@ td input {
   height:22px; 
   margin:0px; 
 }
+
+.error {
+  background-color: crimson;
+}

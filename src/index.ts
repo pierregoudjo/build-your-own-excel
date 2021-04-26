@@ -1,9 +1,8 @@
 import "preact/debug"
 
-import type {Render, Update, Trigger} from "./boot"
+import type {Trigger} from "./boot"
 import type {FunctionComponent} from 'preact'
 import type {Option} from "fp-ts/es6/Option"
-import type { Parser } from "parsimmon"
 
 import {none, match, some, fromNullable, toUndefined} from "fp-ts/es6/Option"
 import { pipe } from "fp-ts/es6/function"
@@ -40,11 +39,6 @@ import { connect } from "unistore/preact"
 //      2 => Write a recursive function that can evaluate the expression
 //
 
-type Position = [string, number]
-const positionAsString = (position: Position) => `${position[0]}${position[1]}`
-const positionEquals = (p1: Position, p2: Position) => p1[0] === p2[0] && p1[1] === p2[1]
-const positionFromColAndRow = (col: string, row: number): Position => ([col, row])
-
 type State = {
   cols: string[]
   rows: number[]
@@ -52,43 +46,59 @@ type State = {
   cells: Record<string, string>
 }
 
+type Position = [string, number]
 type Operator = "+" | "*" | "-" | "/"
-type Binary = [ Expr, Operator, Expr ] // A binary operation is a tuple of an expression, an operator and another expression
+type Binary = [Expr, Operator, Expr]
+type Reference = Position
+
+
 
 type Value = number
 
 const Value = Number
 
+const positionAsString = (position: Position) => `${position[0]}${position[1]}`
+const positionEquals = (p1: Position, p2: Position) => p1[0] === p2[0] && p1[1] === p2[1]
+const positionFromColAndRow = (col: string, row: number): Position => ([col, row])
+
 const isValue = (expr: Expr): expr is Value => typeof expr == 'number'
+
+const isBinary = (expr: Expr): expr is Binary => Array.isArray(expr) && expr.length == 3
+
+const isReference = (expr: Expr): expr is Reference => Array.isArray(expr) && expr.length == 2
+
 
 type Expr = 
   | Value
   | Binary 
+  | Reference
 
 
-let operator = P.alt(
-  P.string("+"),
-  P.string("*"),
-  P.string("-"),
-  P.string("/")
-)
+const Lang = P.createLanguage({
+  Operator: () => P.alt(P.string('+'), P.string('-'), P.string('*'), P.string('/')), 
+  Number: () => P.digits.map(Number),
+  Brack: (r) => P.string("(").then(P.optWhitespace).then(r.Expr).skip(P.optWhitespace).skip(P.string(")")), 
+  Reference: () => P.seq(P.letter, P.digits.map(Value)), 
+  Expr: (r) => P.alt(r.Binary, r.Term),
+  Term: (r) => P.alt(r.Brack, r.Reference, r.Number), 
+  Binary: (r) => P.seq(r.Term.skip(P.optWhitespace), r.Operator.skip(P.optWhitespace), r.Term.skip(P.optWhitespace)),
+  Formula: (r) => P.string('=').then(P.optWhitespace).then(r.Expr),
+  Equation: (r) => P.optWhitespace.then(P.alt(r.Formula, r.Number)).skip(P.optWhitespace)
+})
 
-
-const value: Parser<Value> = P.digits.map(Value)
-
-const binary: Parser<Binary> = P.seq(value, operator, value)
-
-const expr: Parser<Expr> = P.alt(binary, value)
-
-const evaluate = (expr: Expr): Value => {
+const evaluate = (cells : Record<string, string>) => (expr: Expr): number => {
   if (isValue(expr)) {
     return expr
-  } else {
-    let ops = {"+": add, "*": multiply, "-": minus, "/": divide}
+  } else if(isBinary(expr)) {
+    const ops = {"+": add, "*": multiply, "-": minus, "/": divide}
     const [l, op, r] = expr
-    const le = evaluate(l)
-    const re = evaluate(r)
+    const le = evaluate(cells)(l)
+    const re = evaluate(cells)(r)
     return ops[op](le,re)
+  } else {
+    const code = cells[positionAsString(expr)]
+    const newExpr = Lang.Equation.tryParse(code)
+    return evaluate(cells)(newExpr)
   }
 }
 
@@ -99,7 +109,14 @@ const actions = {
   updateValue: (state: State, payload: [Position, string]) => {
     const [position, value] = payload
     const stringPosition = positionAsString(position)
-    return {cells: {...state.cells, [stringPosition]: value}}
+    value !== '' ? value : undefined
+    if (value !== '') {
+      return {cells: {...state.cells, [stringPosition]: value}}
+    } else {
+      const cells = {...state.cells}
+      delete cells[stringPosition]
+      return {cells}
+    }
   }
 }
 
@@ -120,35 +137,38 @@ const renderEditor = (value: Option<string>, position: Position, updateValue: Tr
   `
 }
 
-const renderView = (value: Option<string>, position: Position, trigger: Trigger) => {
-  const displayValue = pipe(
+const renderView = (cells: Record<string,string>, value: Option<string>, position: Position, trigger: Trigger) => {
+  const result = pipe(
     value,
     match(
-      () => "",
-      (v) => expr.map(evaluate).tryParse(v).toString()
+      () => ({status: true, value:""} as P.Result<string>),
+      (v) => Lang.Equation.map(evaluate(cells)).map(String).parse(v)
     )
   )
+  const displayValue = result.status ? result.value : "#ERROR"
   
   return html`
-    <td onclick=${() => trigger(position)}>${displayValue}</td>
+    <td class=${result.status ? "" : "error"} onclick=${() => trigger(position)}>${displayValue}</td>
   `
 }
 
 type CellProps = {
   position: Position
   active: boolean
-  cell: Option<string>
+  cell: Option<string>,
+  cells: Record<string,string>
   startEdit: (payload: Position) => void
   updateValue: (payload: [Position, string]) => void
 }
 
-const Cell: FunctionComponent<CellProps> = ({position, cell, active, startEdit, updateValue}) =>{
-  return active ? renderEditor(cell, position, updateValue) : renderView(cell, position, startEdit)
+const Cell: FunctionComponent<CellProps> = ({position, cell: currentCell, active, startEdit, updateValue, cells}) =>{
+  return active ? renderEditor(currentCell, position, updateValue) : renderView(cells, currentCell, position, startEdit)
 }
 
 const ConnectedCell = connect(
   (state: State, props: Pick<CellProps, 'position'>) => ({
     cell: fromNullable(state.cells[positionAsString(props.position)]), 
+    cells: state.cells,
     active: pipe(
       state.active,
       match(
@@ -175,7 +195,7 @@ const Grid: FunctionComponent<GridProps> = ({cols, rows}) => {
       ${rows.map(row => html`
         <tr>
           <th>${row}</th>  
-          ${cols.map(col =>html`<${ConnectedCell} position=${positionFromColAndRow(col, row)} />`)}
+          ${cols.map(col =>html`<${ConnectedCell} key=${positionAsString(positionFromColAndRow(col, row))} position=${positionFromColAndRow(col, row)} />`)}
         </tr>
       `)}
     </table>`
