@@ -1,8 +1,9 @@
 import "preact/debug"
 
 import type {Trigger} from "./boot"
-import type {FunctionComponent} from 'preact'
+import type {FunctionComponent, AnyComponent, ComponentConstructor} from 'preact'
 import type {Option} from "fp-ts/es6/Option"
+import type {Expression, Value, Position, BinaryOperation, Reference} from "./types"
 
 import {none, match, some, fromNullable, toUndefined} from "fp-ts/es6/Option"
 import { pipe } from "fp-ts/es6/function"
@@ -11,6 +12,7 @@ import {add, divide, minus, multiply, alphabeticRange, numericRange} from "./boo
 import {app} from "./boot"
 import P from "parsimmon"
 import { connect } from "unistore/preact"
+import {EquationParser as Parser} from "./parser"
 
 //
 // Step 1: Define early domain model
@@ -46,47 +48,15 @@ type State = {
   cells: Record<string, string>
 }
 
-type Position = [string, number]
-type Operator = "+" | "*" | "-" | "/"
-type Binary = [Expr, Operator, Expr]
-type Reference = Position
-
-
-
-type Value = number
-
-const Value = Number
-
 const positionAsString = (position: Position) => `${position[0]}${position[1]}`
 const positionEquals = (p1: Position, p2: Position) => p1[0] === p2[0] && p1[1] === p2[1]
 const positionFromColAndRow = (col: string, row: number): Position => ([col, row])
 
-const isValue = (expr: Expr): expr is Value => typeof expr == 'number'
+const isValue = (expr: Expression): expr is Value => typeof expr == 'number'
 
-const isBinary = (expr: Expr): expr is Binary => Array.isArray(expr) && expr.length == 3
+const isBinary = (expr: Expression): expr is BinaryOperation => Array.isArray(expr) && expr.length == 3
 
-const isReference = (expr: Expr): expr is Reference => Array.isArray(expr) && expr.length == 2
-
-
-type Expr = 
-  | Value
-  | Binary 
-  | Reference
-
-
-const Lang = P.createLanguage({
-  Operator: () => P.alt(P.string('+'), P.string('-'), P.string('*'), P.string('/')), 
-  Number: () => P.digits.map(Number),
-  Brack: (r) => P.string("(").then(P.optWhitespace).then(r.Expr).skip(P.optWhitespace).skip(P.string(")")), 
-  Reference: () => P.seq(P.letter, P.digits.map(Value)), 
-  Expr: (r) => P.alt(r.Binary, r.Term),
-  Term: (r) => P.alt(r.Brack, r.Reference, r.Number), 
-  Binary: (r) => P.seq(r.Term.skip(P.optWhitespace), r.Operator.skip(P.optWhitespace), r.Term.skip(P.optWhitespace)),
-  Formula: (r) => P.string('=').then(P.optWhitespace).then(r.Expr),
-  Equation: (r) => P.optWhitespace.then(P.alt(r.Formula, r.Number)).skip(P.optWhitespace)
-})
-
-const evaluate = (cells : Record<string, string>) => (expr: Expr): number => {
+const evaluate = (cells : Record<string, string>) => (expr: Expression): number => {
   if (isValue(expr)) {
     return expr
   } else if(isBinary(expr)) {
@@ -97,7 +67,7 @@ const evaluate = (cells : Record<string, string>) => (expr: Expr): number => {
     return ops[op](le,re)
   } else {
     const code = cells[positionAsString(expr)]
-    const newExpr = Lang.Equation.tryParse(code)
+    const newExpr = Parser.tryParse(code)
     return evaluate(cells)(newExpr)
   }
 }
@@ -142,7 +112,7 @@ const renderView = (cells: Record<string,string>, value: Option<string>, positio
     value,
     match(
       () => ({status: true, value:""} as P.Result<string>),
-      (v) => Lang.Equation.map(evaluate(cells)).map(String).parse(v)
+      (v) => Parser.map(evaluate(cells)).map(String).parse(v)
     )
   )
   const displayValue = result.status ? result.value : "#ERROR"
@@ -166,7 +136,7 @@ const Cell: FunctionComponent<CellProps> = ({position, cell: currentCell, active
 }
 
 const ConnectedCell = connect(
-  (state: State, props: Pick<CellProps, 'position'>) => ({
+  (state: State, props: {position: Position}) => ({
     cell: fromNullable(state.cells[positionAsString(props.position)]), 
     cells: state.cells,
     active: pipe(
@@ -185,7 +155,11 @@ type GridProps = {
   rows: number[]
 }
 
-const Grid: FunctionComponent<GridProps> = ({cols, rows}) => {
+type CellComponent = 
+  | ComponentConstructor<{position: Position}> 
+  | AnyComponent<{position: Position}>
+
+const Grid = (CellComponent: CellComponent) : FunctionComponent<GridProps> =>  ({cols, rows}) => {
   return (
     html`<table>
       <tr>
@@ -195,7 +169,7 @@ const Grid: FunctionComponent<GridProps> = ({cols, rows}) => {
       ${rows.map(row => html`
         <tr>
           <th>${row}</th>  
-          ${cols.map(col =>html`<${ConnectedCell} key=${positionAsString(positionFromColAndRow(col, row))} position=${positionFromColAndRow(col, row)} />`)}
+          ${cols.map(col =>html`<${CellComponent} key=${positionAsString(positionFromColAndRow(col, row))} position=${positionFromColAndRow(col, row)} />`)}
         </tr>
       `)}
     </table>`
@@ -203,6 +177,6 @@ const Grid: FunctionComponent<GridProps> = ({cols, rows}) => {
 };
 
 
-app ("main", initial, connect(['cols', 'rows' ], {}) (Grid as any), actions)
+app ("main", initial, connect(['cols', 'rows' ], {}) (Grid(ConnectedCell) as any), actions)
 
 
