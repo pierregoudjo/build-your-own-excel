@@ -15,8 +15,5 @@
     },
     "skipLibCheck": true,
     
-  },
-  // "exclude": [
-  //   "node_modules"
-  // ]
+  }
 }

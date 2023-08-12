@@ -1,0 +1,22 @@
+{
+  "name": "vite-typescript-starter",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.2",
+    "vite": "^4.4.9"
+  },
+  "dependencies": {
+    "fp-ts": "^2.16.1",
+    "htm": "^3.1.1",
+    "parsimmon": "^1.18.1",
+    "preact": "^10.16.0",
+    "unistore": "^3.5.2"
+  }
+}
